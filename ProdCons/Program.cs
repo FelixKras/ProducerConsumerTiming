@@ -70,19 +70,19 @@ namespace ProdCons
 
         public static void Main(string[] args)
         {
-            ProducerConsumerRendezvousPoint<DTO> prodCons = new ProducerConsumerRendezvousPoint<DTO>(2);
-
+            IProduceConsume<DTO> prodConsume = ProduceConsumeFactory<DTO>.GetImplementation(ProdCons.ConcurQue, 2);
+            
 
             Thread thrProduce = new Thread(new ParameterizedThreadStart(ProduceMethod));
-            thrProduce.Start(prodCons);
+            thrProduce.Start(prodConsume);
 
             Thread thrConsume = new Thread(new ParameterizedThreadStart(ConsumeMethod));
-            thrConsume.Start(prodCons);
+            thrConsume.Start(prodConsume);
         }
 
         private static void ConsumeMethod(object prodConsObj)
         {
-            ProducerConsumerRendezvousPoint<DTO> prodCons = prodConsObj as ProducerConsumerRendezvousPoint<DTO>;
+            ProducerConsumerInterlocked<DTO> prodCons = prodConsObj as ProducerConsumerInterlocked<DTO>;
             DTO dto;
 
             if (prodCons == null)
@@ -101,7 +101,7 @@ namespace ProdCons
 
         private static void ProduceMethod(object prodConsObj)
         {
-            ProducerConsumerRendezvousPoint<DTO> prodCons = prodConsObj as ProducerConsumerRendezvousPoint<DTO>;
+            IProduceConsume<DTO> prodCons = prodConsObj as IProduceConsume<DTO>;
             Random rnd = new Random();
             byte[] rndData = new byte[8];
             byte[] allData = new byte[12];
@@ -131,110 +131,5 @@ namespace ProdCons
     }
 
 
-    public class ProducerConsumerRendezvousPoint<T>
-    {
-        private T[] m_buffer;
-        private volatile int m_consumerIndex;
-        private volatile int m_consumerWaiting;
-        private AutoResetEvent m_consumerEvent;
-        private volatile int m_producerIndex;
-        private volatile int m_producerWaiting;
-        private AutoResetEvent m_producerEvent;
-
-        public ProducerConsumerRendezvousPoint(int capacity)
-        {
-            if (capacity < 2) throw new ArgumentOutOfRangeException("capacity");
-
-            m_buffer = new T[capacity];
-            m_consumerEvent = new AutoResetEvent(false);
-            m_producerEvent = new AutoResetEvent(false);
-        }
-
-        private int Capacity
-        {
-            get { return m_buffer.Length; }
-        }
-
-        private bool IsEmpty
-        {
-            get { return (m_consumerIndex == m_producerIndex); }
-        }
-
-        private bool IsFull
-        {
-            get { return (((m_producerIndex + 1) % Capacity) == m_consumerIndex); }
-        }
-
-        public void Enqueue(T value)
-        {
-            if (IsFull)
-            {
-                WaitUntilNonFull();
-            }
-
-            m_buffer[m_producerIndex] = value;
-
-            Interlocked.Exchange(
-                ref m_producerIndex, (m_producerIndex + 1) % Capacity);
-
-            if (m_consumerWaiting == 1)
-            {
-                m_consumerEvent.Set();
-            }
-        }
-
-        private void WaitUntilNonFull()
-        {
-            Interlocked.Exchange(ref m_producerWaiting, 1);
-
-            try
-            {
-                while (IsFull)
-                {
-                    m_producerEvent.WaitOne();
-                }
-            }
-            finally
-            {
-                m_producerWaiting = 0;
-            }
-        }
-
-        public T Dequeue()
-        {
-            if (IsEmpty)
-            {
-                WaitUntilNonEmpty();
-            }
-
-            T value = m_buffer[m_consumerIndex];
-            m_buffer[m_consumerIndex] = default(T);
-
-            Interlocked.Exchange(ref m_consumerIndex, (m_consumerIndex + 1) % Capacity);
-
-            if (m_producerWaiting == 1)
-            {
-                m_producerEvent.Set();
-            }
-
-            return value;
-        }
-
-        private void WaitUntilNonEmpty()
-        {
-            Interlocked.Exchange(ref m_consumerWaiting, 1);
-
-            try
-            {
-                while (IsEmpty)
-                {
-                    m_consumerEvent.WaitOne();
-                }
-            }
-            finally
-            {
-                m_consumerWaiting = 0;
-            }
-        }
-    }
+   
 }
