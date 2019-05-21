@@ -118,8 +118,8 @@ namespace ProdCons
         private ConcurrentQueue<T> que;
         public void Init(int capacity)
         {
-            que=new ConcurrentQueue<T>();
-            
+            que = new ConcurrentQueue<T>();
+
         }
 
         public void Enqueue(T value)
@@ -153,14 +153,12 @@ namespace ProdCons
             switch (enmType)
             {
                 case ProdCons.Interlocked:
-                    ProducerConsumerInterlocked<T> prod1 = new ProducerConsumerInterlocked<T>();
-                    prod1.Init(capacity);
-                    interfaceToReturn = prod1;
+                    interfaceToReturn = new ProducerConsumerInterlocked<T>();
+                    interfaceToReturn.Init(capacity);
                     break;
                 case ProdCons.ConcurQue:
-                    ConcurrQueProdCons<T> prod2 = new ConcurrQueProdCons<T>();
-                    prod2.Init(capacity);
-                    interfaceToReturn = prod2;
+                    interfaceToReturn = new ConcurrQueProdCons<T>();
+                    interfaceToReturn.Init(capacity);
                     break;
                 default:
                     interfaceToReturn = null;

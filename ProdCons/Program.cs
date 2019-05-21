@@ -70,7 +70,7 @@ namespace ProdCons
 
         public static void Main(string[] args)
         {
-            IProduceConsume<DTO> prodConsume = ProduceConsumeFactory<DTO>.GetImplementation(ProdCons.ConcurQue, 2);
+            IProduceConsume<DTO> prodConsume = ProduceConsumeFactory<DTO>.GetImplementation(ProdCons.Interlocked, 2);
             
 
             Thread thrProduce = new Thread(new ParameterizedThreadStart(ProduceMethod));
@@ -78,6 +78,8 @@ namespace ProdCons
 
             Thread thrConsume = new Thread(new ParameterizedThreadStart(ConsumeMethod));
             thrConsume.Start(prodConsume);
+
+            thrProduce.Join();
         }
 
         private static void ConsumeMethod(object prodConsObj)
