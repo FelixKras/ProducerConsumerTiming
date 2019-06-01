@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -13,20 +14,47 @@ namespace ProdCons
             Deq,
         }
 
+
         private static Stopwatch sw;
-        private static List<Tuple<ActionsEnm, uint, double>> lstTimes;
+        private static ConcurrentDictionary<uint, double[]> lstTimes;
 
         static cTimer()
         {
-            lstTimes = new List<Tuple<ActionsEnm, uint, double>>(1000);
+            lstTimes = new ConcurrentDictionary<uint, double[]>(2, 10000);
             sw = Stopwatch.StartNew();
         }
-
+        readonly static object _locker = new object();
         public static void RecordTime(ActionsEnm enm, uint iCount)
         {
-            Tuple<ActionsEnm, uint, double> tup =
-                new Tuple<ActionsEnm, uint, double>(enm, iCount, sw.Elapsed.TotalMilliseconds);
-            lstTimes.Add(tup);
+
+            lock(_locker){
+                double dTime = sw.ElapsedTicks * 1000D / Stopwatch.Frequency;
+                if (!lstTimes.ContainsKey(iCount))
+                {
+                    if (enm == ActionsEnm.Enq)
+                    {
+                        lstTimes.TryAdd(iCount, new double[] { -100, dTime });
+                    }
+                    else
+                    {
+                        lstTimes.TryAdd(iCount, new double[] { dTime, -100 });
+                    }
+
+                }
+                else
+                {
+                    if (enm == ActionsEnm.Enq)
+                    {
+                        lstTimes[iCount][1] = dTime;
+                    }
+                    else
+                    {
+                        lstTimes[iCount][0] = dTime;
+                    }
+
+                }
+            }
+
         }
 
         public static void WriteAllRecords()
@@ -34,24 +62,15 @@ namespace ProdCons
             using (StreamWriter strw = new StreamWriter(new FileStream(DateTime.Now.ToString("ddMMyyyyhhmmss") + ".txt",
                 FileMode.Append, FileAccess.Write, FileShare.Write)))
             {
-                for (int ii = 0; ii < lstTimes.Count; ii++)
+                for (uint ii = 0; ii < lstTimes.Count; ii++)
                 {
-                    for (int jj = 1; jj < 5; jj++)
-                    {
-                        if (lstTimes[ii].Item1 == ActionsEnm.Enq &&
-                            (lstTimes[ii + jj].Item1 == ActionsEnm.Deq) &&
-                            (lstTimes[ii].Item2 == lstTimes[ii + jj].Item2))
-                        {
-                            string ss = lstTimes[ii].Item1 + "," + lstTimes[ii].Item2 + "," + lstTimes[ii].Item3+
-                                        ","+lstTimes[ii + jj].Item1 + "," + lstTimes[ii + jj].Item2 + "," + lstTimes[ii + jj].Item3;
-                            strw.WriteLine(ss);
-                            break;
-                        }
-                    }
 
-                    
-                    
+                    string ss = ii + "," + (lstTimes[ii][1] - lstTimes[ii][0]);
+                    strw.WriteLine(ss);
                 }
+
+
+
             }
         }
     }

@@ -111,6 +111,11 @@ namespace ProdCons
                 m_consumerWaiting = 0;
             }
         }
+
+        public void Stop()
+        {
+            m_producerEvent.Set();
+        }
     }
 
     public class ConcurrQueProdCons<T> : IProduceConsume<T>
@@ -136,6 +141,11 @@ namespace ProdCons
             }
 
             return default(T);
+        }
+
+        public void Stop()
+        {
+            
         }
     }
 
@@ -174,5 +184,7 @@ namespace ProdCons
         void Init(int capacity);
         void Enqueue(T value);
         T Dequeue();
+
+        void Stop();
     }
 }

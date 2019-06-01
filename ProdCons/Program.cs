@@ -122,13 +122,14 @@ namespace ProdCons
                 prodCons.Enqueue(DTO.GetStruct(allData));
                 cTimer.RecordTime(cTimer.ActionsEnm.Enq,(uint)iCount);
                 iCount++;
-                if (iCount == 200)
+                if (iCount == 2000)
                 {
                     bKillSwitch = true;
                     cTimer.WriteAllRecords();
                 }
 
             }
+            prodCons.Stop();
         }
     }
 
